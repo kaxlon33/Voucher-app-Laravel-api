@@ -13,6 +13,7 @@ import ProductListEmptyState from "./ProductListEmptyState";
 import ProductRow from "./ProductRow";
 import { Link } from "react-router-dom";
 import { debounce } from "lodash";
+import Pagination from "./pagination";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -22,24 +23,30 @@ const ProductList = () => {
 
   const [search, setSearch] = useState("");
 
-  const searchInput = useRef();
+  const[fetchUrl , setFetchUrl] = useState(import.meta.env.VITE_API_URL+`/products`);
 
   const { data, isLoading, error } = useSWR(
-    search
-      ? `${import.meta.env.VITE_API_URL}/products?product_name_like=${search}`
-      : `${import.meta.env.VITE_API_URL}/products`,
+
+    fetchUrl,
     fetcher
   );
 
-  const handleSearch = debounce((e) => {
+  const handleSearch =debounce((e) => {
     console.log(e.target.value);
     setSearch(e.target.value);
-  }, 500);
+    setFetchUrl(`${import.meta.env.VITE_API_URL}/products?q=${e.target.value}`);
+},500);
 
   const handleClear = () => {
     setSearch("");
     searchInput.current.value = "";
   };
+
+  const updateFetchUrl = (url) => {
+    setFetchUrl(url);
+  }
+  // if(isLoading) return <p>Loading...</p>
+  // console.log(data)
 
   return (
     <div>
@@ -51,7 +58,6 @@ const ProductList = () => {
             </div>
             <input
               onChange={handleSearch}
-              ref={searchInput}
               type="text"
               className="bg-gray-50 border border-gray-300 text-stone-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               placeholder="Search Product"
@@ -76,7 +82,7 @@ const ProductList = () => {
           </Link>
         </div>
       </div>
-      <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+      <div className="relative overflow-x-auto shadow-md sm:rounded-lg mb-5">
         <table className="w-full text-sm text-left rtl:text-right text-stone-500 dark:text-stone-400">
           <thead className="text-xs text-stone-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-stone-400">
             <tr>
@@ -94,6 +100,9 @@ const ProductList = () => {
                 Created At
               </th>
               <th scope="col" className="px-6 py-3 text-end">
+                Updated At
+              </th>
+              <th scope="col" className="px-6 py-3 text-end">
                 Action
               </th>
             </tr>
@@ -101,16 +110,17 @@ const ProductList = () => {
           <tbody>
             {isLoading ? (
               <ProductListSkeletonLoader />
-            ) : data.length === 0 ? (
+            ) : data?.data?.length === 0 ? (
               <ProductListEmptyState />
             ) : (
-              data.map((product) => (
+              data?.data?.map((product) => (
                 <ProductRow product={product} key={product.id} />
               ))
             )}
           </tbody>
         </table>
       </div>
+      {!isLoading && <Pagination links={data?.links} meta={data?.meta} updateFetchUrl={updateFetchUrl}/> }
     </div>
   );
 };
